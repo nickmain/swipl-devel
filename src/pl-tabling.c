@@ -6300,26 +6300,30 @@ tbl_reset_tabling_attributes(Definition def)
 
 
 int
-tbl_get_predicate_attribute(Definition def, atom_t att, size_t *value)
+tbl_get_predicate_attribute(Definition def, atom_t att, term_t value)
 { table_props *p;
 
   if ( (p=def->tabling) )
-  { size_t v0;
+  { GET_LD
 
-    if ( att == ATOM_abstract )
-      v0 = p->abstract;
-    else if ( att == ATOM_subgoal_abstract )
-      v0 = p->subgoal_abstract;
-    else if ( att == ATOM_answer_abstract )
-      v0 = p->answer_abstract;
-    else if ( att == ATOM_max_answers )
-      v0 = p->max_answers;
-    else
-      return -1;
+    if ( att == ATOM_monotonic )
+    { return PL_unify_bool(value, true(p, TP_MONOTONIC));
+    } else
+    { size_t v0;
 
-    if ( v0 != (size_t)-1 )
-    { *value = v0;
-      return TRUE;
+      if ( att == ATOM_abstract )
+	v0 = p->abstract;
+      else if ( att == ATOM_subgoal_abstract )
+	v0 = p->subgoal_abstract;
+      else if ( att == ATOM_answer_abstract )
+	v0 = p->answer_abstract;
+      else if ( att == ATOM_max_answers )
+	v0 = p->max_answers;
+      else
+	return -1;
+
+      if ( v0 != (size_t)-1 )
+	return PL_unify_int64(value, v0);
     }
   }
 

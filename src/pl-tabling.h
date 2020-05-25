@@ -229,7 +229,7 @@ COMMON(int)	idg_add_dyncall(Definition def, trie *ctrie,
 COMMON(int)	tbl_is_predicate_attribute(atom_t key);
 COMMON(void)	tbl_reset_tabling_attributes(Definition def);
 COMMON(int)	tbl_get_predicate_attribute(Definition def,
-					    atom_t att, size_t *value);
+					    atom_t att, term_t value);
 COMMON(int)	tbl_set_predicate_attribute(Definition def,
 					    atom_t att, term_t value);
 COMMON(int)	tbl_is_restraint_flag(atom_t key);

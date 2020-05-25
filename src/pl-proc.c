@@ -3353,11 +3353,7 @@ PRED_IMPL("$get_predicate_attribute", 3, get_predicate_attribute,
   { def = getProcDefinition(proc);
     return PL_unify_integer(value, sizeof_predicate(def));
   } else if ( tbl_is_predicate_attribute(key) )
-  { size_t sz_value;
-
-    if ( tbl_get_predicate_attribute(def, key, &sz_value) == TRUE )
-      return PL_unify_int64(value, sz_value);
-    return FALSE;
+  { return tbl_get_predicate_attribute(def, key, value);
   } else if ( (att = attribute_mask(key)) )
   { return PL_unify_integer(value, (def->flags & att) ? 1 : 0);
   } else
