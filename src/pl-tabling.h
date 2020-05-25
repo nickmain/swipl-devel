@@ -202,11 +202,14 @@ typedef struct trie_array
 		 *     PREDICATE PROPERTIES	*
 		 *******************************/
 
+#define TP_MONOTONIC	(0x0001)	/* Monotonic tabling */
+
 typedef struct table_props
-{ size_t abstract;			/* IDG abstraction */
-  size_t subgoal_abstract;		/* Subgoal abstraction */
-  size_t answer_abstract;		/* Answer abstraction */
-  size_t max_answers;			/* Answer count limit */
+{ unsigned int	flags;			/* TP_* flags */
+  size_t	abstract;		/* IDG abstraction */
+  size_t	subgoal_abstract;	/* Subgoal abstraction */
+  size_t	answer_abstract;	/* Answer abstraction */
+  size_t	max_answers;		/* Answer count limit */
 } table_props;
 
 
@@ -228,7 +231,7 @@ COMMON(void)	tbl_reset_tabling_attributes(Definition def);
 COMMON(int)	tbl_get_predicate_attribute(Definition def,
 					    atom_t att, size_t *value);
 COMMON(int)	tbl_set_predicate_attribute(Definition def,
-					    atom_t att, size_t value);
+					    atom_t att, term_t value);
 COMMON(int)	tbl_is_restraint_flag(atom_t key);
 COMMON(int)	tbl_get_restraint_flag(term_t t, atom_t key ARG_LD);
 COMMON(int)	tbl_set_restraint_flag(term_t t, atom_t key ARG_LD);

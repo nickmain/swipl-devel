@@ -3511,16 +3511,8 @@ PRED_IMPL("$set_predicate_attribute", 3, set_predicate_attribute,
   if ( !PL_get_atom_ex(what, &key) )
     return FALSE;
   if ( tbl_is_predicate_attribute(key) )
-  { size_t v;
-    atom_t inf;
-
-    if ( PL_get_atom(value, &inf) && inf == ATOM_infinite )
-      v	= (size_t)-1;
-    else if ( !PL_get_size_ex(value, &v) )
-      return FALSE;
-
-    if ( get_procedure(pred, &proc, 0, GP_DEFINE|GP_NAMEARITY) )
-      return tbl_set_predicate_attribute(proc->definition, key, v) == TRUE;
+  { if ( get_procedure(pred, &proc, 0, GP_DEFINE|GP_NAMEARITY) )
+      return tbl_set_predicate_attribute(proc->definition, key, value);
 
     return FALSE;
   }
