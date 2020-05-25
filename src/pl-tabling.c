@@ -6275,7 +6275,8 @@ tbl_is_predicate_attribute(atom_t key)
 { return ( key == ATOM_abstract ||
 	   key == ATOM_subgoal_abstract ||
 	   key == ATOM_answer_abstract ||
-	   key == ATOM_max_answers
+	   key == ATOM_max_answers ||
+	   key == ATOM_monotonic
 	 );
 }
 
@@ -6307,7 +6308,7 @@ tbl_get_predicate_attribute(Definition def, atom_t att, term_t value)
   { GET_LD
 
     if ( att == ATOM_monotonic )
-    { return PL_unify_bool(value, true(p, TP_MONOTONIC));
+    { return PL_unify_integer(value, !!true(p, TP_MONOTONIC));
     } else
     { size_t v0;
 
@@ -6379,7 +6380,12 @@ tbl_set_predicate_attribute(Definition def, atom_t att, term_t value)
   }
 
   if ( att == ATOM_monotonic )
-  { return set_bool_attr(p, TP_MONOTONIC, value);
+  { if ( set_bool_attr(p, TP_MONOTONIC, value) )
+    { if ( true(p, TP_MONOTONIC) )
+	return setAttrDefinition(def, P_INCREMENTAL, true(p, TP_MONOTONIC));
+      return TRUE;
+    }
+    return FALSE;
   } else
   { size_t v;
 

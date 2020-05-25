@@ -312,6 +312,7 @@ tabled_attribute(tshared).
 tabled_attribute(max_answers).
 tabled_attribute(subgoal_abstract).
 tabled_attribute(answer_abstract).
+tabled_attribute(monotonic).
 
 %!  start_tabling(:Closure, :Wrapper, :Implementation)
 %

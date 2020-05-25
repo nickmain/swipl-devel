@@ -918,6 +918,8 @@ table_flag(shared, Pred) :-
     '$get_predicate_attribute'(Pred, tshared, 1).
 table_flag(incremental, Pred) :-
     '$get_predicate_attribute'(Pred, incremental, 1).
+table_flag(monotonic, Pred) :-
+    '$get_predicate_attribute'(Pred, monotonic, 1).
 table_flag(subgoal_abstract(N), Pred) :-
     '$get_predicate_attribute'(Pred, subgoal_abstract, N).
 table_flag(answer_abstract(N), Pred) :-
