@@ -330,6 +330,7 @@ tabled_attribute(monotonic).
 
 start_tabling(Closure, Wrapper, Worker) :-
     '$tbl_variant_table'(Closure, Wrapper, Trie, Status, Skeleton),
+    catch(shift(dependency(Skeleton, Trie)), _, true),
     start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton).
 
 start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton) :-
@@ -579,6 +580,8 @@ delim(Skeleton, Worker, WorkList, Delays) :-
         '$tbl_wkl_add_answer'(WorkList, Skeleton, Delays, Complete),
         Complete == !,
         !
+    ;   SourceCall = dependency(SrcSkeleton, SourceWL)
+    ->  delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = call_info(SrcSkeleton, SourceWL)
     ->  '$tbl_add_global_delays'(Delays, AllDelays),
         tdebug(wl_goal(SourceWL, SrcGoal, _)),
