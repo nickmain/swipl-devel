@@ -66,7 +66,8 @@
             '$wfs_call'/2,              % :Goal, -Delays
 
             '$wrap_incremental'/1,      % :Head
-            '$unwrap_incremental'/1     % :Head
+            '$unwrap_incremental'/1,    % :Head
+            '$start_dynamic'/2
           ]).
 
 :- meta_predicate
@@ -569,6 +570,8 @@ activate(Skeleton, Worker, WorkList) :-
 %        '$tbl_wkl_add_answer'/4 joins the two.  For a dependency we
 %        join the two explicitly.
 
+:- dynamic user:tab_dep/5, user:dyn_dep/4.
+
 delim(Skeleton, Worker, WorkList, Delays) :-
     reset(Worker, SourceCall, Continuation),
     tdebug(wl_goal(WorkList, Goal, _)),
@@ -581,7 +584,14 @@ delim(Skeleton, Worker, WorkList, Delays) :-
         Complete == !,
         !
     ;   SourceCall = dependency(SrcSkeleton, SourceWL)
-    ->  delim(Skeleton, Continuation, WorkList, Delays)
+    ->  '$tbl_wkl_table'(WorkList, ATrie),
+        '$tbl_wkl_table'(SourceWL, SrcTrie),
+        assertz(user:tab_dep(SrcTrie, SrcSkeleton, Continuation, Skeleton, ATrie)),
+        delim(Skeleton, Continuation, WorkList, Delays)
+    ;   SourceCall = dependency(Dynamic)
+    ->  '$tbl_wkl_table'(WorkList, ATrie),
+        assertz(user:dyn_dep(Dynamic, Continuation, Skeleton, ATrie)),
+        call(Continuation)
     ;   SourceCall = call_info(SrcSkeleton, SourceWL)
     ->  '$tbl_add_global_delays'(Delays, AllDelays),
         tdebug(wl_goal(SourceWL, SrcGoal, _)),
@@ -1475,12 +1485,18 @@ sum(S0, S1, S) :- S is S0+S1.
 %   Wrap an incremental dynamic predicate to be added to the IDG.
 
 '$wrap_incremental'(Head) :-
+    '$wrap_predicate'(Head, table, _Closure, Wrapped,
+                      '$start_dynamic'(Head, Wrapped)),
     abstract_goal(Head, Abstract),
     '$pi_head'(PI, Head),
     (   Head == Abstract
     ->  prolog_listen(PI, dyn_update)
     ;   prolog_listen(PI, dyn_update(Abstract))
     ).
+
+'$start_dynamic'(Head, Wrapped) :-
+    shift(dependency(Head)),
+    Wrapped.
 
 abstract_goal(M:Head, M:Abstract) :-
     compound(Head),
@@ -1498,9 +1514,10 @@ abstract_goal(Head, Head).
 %   @tbd Add a '$clause_head'(-Head, +ClauseRef) to only decompile the
 %   head.
 
-dyn_update(_Action, ClauseRef) :-
+dyn_update(Action, ClauseRef) :-
     (   atomic(ClauseRef)                       % avoid retractall, start(_)
     ->  '$clause'(Head, _Body, ClauseRef, _Bindings),
+        user:dyn_propagate(Action, Head),
         dyn_changed_pattern(Head)
     ;   true
     ).
