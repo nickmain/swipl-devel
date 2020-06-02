@@ -205,6 +205,7 @@ non_terminal(Spec)       :- '$set_pattr'(Spec, pred, non_terminal(true)).
     '$append'(Attrs0, [Attr], Attrs).
 
 '$attr_option'(incremental, incremental(true)).
+'$attr_option'(monotonic, monotonic(true)).
 '$attr_option'(opaque, incremental(false)).
 '$attr_option'(abstract(Level0), abstract(Level)) :-
     '$table_option'(Level0, Level).
