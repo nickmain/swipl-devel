@@ -331,8 +331,11 @@ tabled_attribute(monotonic).
 
 start_tabling(Closure, Wrapper, Worker) :-
     '$tbl_variant_table'(Closure, Wrapper, Trie, Status, Skeleton),
-    catch(shift(dependency(Skeleton, Trie)), _, true),
-    start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton).
+    catch(shift(dependency(Skeleton, Trie, Mono)), _, true),
+    (   Mono == true
+    ->  debug(monotonic, 'Monotonic new answer: ~p', [Skeleton])
+    ;   start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton)
+    ).
 
 start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton) :-
     tdebug(deadlock, 'Got table ~p, status ~p', [Trie, Status]),
@@ -570,7 +573,7 @@ activate(Skeleton, Worker, WorkList) :-
 %        '$tbl_wkl_add_answer'/4 joins the two.  For a dependency we
 %        join the two explicitly.
 
-:- dynamic user:tab_dep/5, user:dyn_dep/4.
+:- dynamic user:tab_dep/6, user:dyn_dep/4.
 
 delim(Skeleton, Worker, WorkList, Delays) :-
     reset(Worker, SourceCall, Continuation),
@@ -583,9 +586,9 @@ delim(Skeleton, Worker, WorkList, Delays) :-
         '$tbl_wkl_add_answer'(WorkList, Skeleton, Delays, Complete),
         Complete == !,
         !
-    ;   SourceCall = dependency(SrcSkeleton, SrcTrie)
+    ;   SourceCall = dependency(SrcSkeleton, SrcTrie, Mono)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
-        assertz(user:tab_dep(SrcTrie, SrcSkeleton, Continuation, Skeleton, ATrie)),
+        assertz(user:tab_dep(SrcTrie, SrcSkeleton, Mono, Continuation, Skeleton, ATrie)),
         delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = dependency(Dynamic)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
