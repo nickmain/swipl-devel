@@ -4250,7 +4250,8 @@ out_fail:
 
 static int
 tbl_variant_table(term_t closure, term_t variant, term_t Trie,
-		  term_t abstract, term_t status, term_t ret, int flags ARG_LD)
+		  term_t abstract, term_t status, term_t ret,
+		  term_t is_monotonic, int flags ARG_LD)
 { trie *atrie;
   Definition def = NULL;
   atom_t clref = 0;
@@ -4261,6 +4262,13 @@ tbl_variant_table(term_t closure, term_t variant, term_t Trie,
   { if ( !idg_init_variant(atrie, def, variant PASS_LD)  ||
 	 !idg_add_edge(atrie, NULL PASS_LD) )
       return FALSE;
+
+    if ( is_monotonic &&
+	 def->tabling && true(def->tabling, TP_MONOTONIC) &&
+	 true(environment_frame, FR_INRESET) )
+    { if ( !PL_unify_bool(is_monotonic, TRUE) )
+	return FALSE;
+    }
 
     if ( clref )
     { TRIE_STAT_INC(atrie, gen_call);
@@ -4276,10 +4284,11 @@ tbl_variant_table(term_t closure, term_t variant, term_t Trie,
 }
 
 static
-PRED_IMPL("$tbl_variant_table", 5, tbl_variant_table, 0)
+PRED_IMPL("$tbl_variant_table", 6, tbl_variant_table, 0)
 { PRED_LD
 
-  return tbl_variant_table(A1, A2, A3, 0, A4, A5, AT_CREATE PASS_LD);
+  return tbl_variant_table(A1, A2, A3, 0, A4, A5, A6,
+			   AT_CREATE PASS_LD);
 }
 
 
@@ -4293,7 +4302,8 @@ static
 PRED_IMPL("$tbl_abstract_table", 6, tbl_abstract_table, 0)
 { PRED_LD
 
-  return tbl_variant_table(A1, A2, A3, A4, A5, A6, AT_CREATE|AT_ABSTRACT PASS_LD);
+  return tbl_variant_table(A1, A2, A3, A4, A5, A6, 0,
+			   AT_CREATE|AT_ABSTRACT PASS_LD);
 }
 
 
@@ -4301,7 +4311,8 @@ static
 PRED_IMPL("$tbl_moded_variant_table", 5, tbl_moded_variant_table, 0)
 { PRED_LD
 
-  return tbl_variant_table(A1, A2, A3, 0, A4, A5, AT_CREATE|AT_MODED PASS_LD);
+  return tbl_variant_table(A1, A2, A3, 0, A4, A5, 0,
+			   AT_CREATE|AT_MODED PASS_LD);
 }
 
 
@@ -6949,7 +6960,7 @@ BeginPredDefs(tabling)
   PRED_DEF("$tbl_wkl_is_false",		1, tbl_wkl_is_false,	     0)
   PRED_DEF("$tbl_wkl_answer_trie",	2, tbl_wkl_answer_trie,      0)
   PRED_DEF("$tbl_wkl_work",		6, tbl_wkl_work,          NDET)
-  PRED_DEF("$tbl_variant_table",	5, tbl_variant_table,	     0)
+  PRED_DEF("$tbl_variant_table",	6, tbl_variant_table,	     0)
   PRED_DEF("$tbl_abstract_table",       6, tbl_abstract_table,       0)
   PRED_DEF("$tbl_existing_variant_table", 5, tbl_existing_variant_table, 0)
   PRED_DEF("$tbl_moded_variant_table",	5, tbl_moded_variant_table,  0)

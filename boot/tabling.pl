@@ -338,10 +338,13 @@ tabled_attribute(monotonic).
 %           from future versions.
 
 start_tabling(Closure, Wrapper, Worker) :-
-    '$tbl_variant_table'(Closure, Wrapper, Trie, Status, Skeleton),
-    catch(shift(dependency(Skeleton, Trie, Mono)), _, true),
-    (   Mono == true
-    ->  tdebug(monotonic, 'Monotonic new answer: ~p', [Skeleton])
+    '$tbl_variant_table'(Closure, Wrapper, Trie, Status, Skeleton, IsMono),
+    (   IsMono == true
+    ->  shift(dependency(Skeleton, Trie, Mono)),
+        (   Mono == true
+        ->  tdebug(monotonic, 'Monotonic new answer: ~p', [Skeleton])
+        ;   start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton)
+        )
     ;   start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton)
     ).
 
@@ -1499,8 +1502,11 @@ sum(S0, S1, S) :- S is S0+S1.
 
 '$wrap_incremental'(Head) :-
     tdebug(monotonic, 'Wrapping ~p', [Head]),
-    '$wrap_predicate'(Head, table, _Closure, Wrapped,
-                      '$start_dynamic'(Head, Wrapped)),
+    (   '$get_predicate_attribute'(Head, monotonic, 1)
+    ->  '$wrap_predicate'(Head, table, _Closure, Wrapped,
+                          '$start_dynamic'(Head, Wrapped))
+    ;   true
+    ),
     abstract_goal(Head, Abstract),
     '$pi_head'(PI, Head),
     (   Head == Abstract
