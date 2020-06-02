@@ -1555,9 +1555,12 @@ dyn_affected(Term, ATrie) :-
 %   updates.
 
 dyn_propagate(asserta, Term) :-
+    !,
     asserted(Term).
 dyn_propagate(assertz, Term) :-
+    !,
     asserted(Term).
+dyn_propagate(_, _).
 
 asserted(Term) :-
     tdebug(monotonic, 'Asserted ~p', [Term]),
