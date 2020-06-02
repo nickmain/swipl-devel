@@ -583,9 +583,8 @@ delim(Skeleton, Worker, WorkList, Delays) :-
         '$tbl_wkl_add_answer'(WorkList, Skeleton, Delays, Complete),
         Complete == !,
         !
-    ;   SourceCall = dependency(SrcSkeleton, SourceWL)
+    ;   SourceCall = dependency(SrcSkeleton, SrcTrie)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
-        '$tbl_wkl_table'(SourceWL, SrcTrie),
         assertz(user:tab_dep(SrcTrie, SrcSkeleton, Continuation, Skeleton, ATrie)),
         delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = dependency(Dynamic)
