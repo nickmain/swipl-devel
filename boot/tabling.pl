@@ -599,11 +599,18 @@ delim(Skeleton, Worker, WorkList, Delays) :-
         !
     ;   SourceCall = dependency(SrcSkeleton, SrcTrie, Mono)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
-        assertz(tab_dep(SrcTrie, SrcSkeleton, Mono, Continuation, Skeleton, ATrie)),
+        (   tab_dep(SrcTrie, SrcSkeleton, Mono, Continuation, Skeleton, ATrie)
+        ->  true
+        ;   assertz(tab_dep(SrcTrie, SrcSkeleton, Mono, Continuation,
+                            Skeleton, ATrie))
+        ),
         delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = dependency(Dynamic)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
-        assertz(dyn_dep(Dynamic, Continuation, Skeleton, ATrie)),
+        (   dyn_dep(Dynamic, Continuation, Skeleton, ATrie)
+        ->  true
+        ;   assertz(dyn_dep(Dynamic, Continuation, Skeleton, ATrie))
+        ),
         delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = call_info(SrcSkeleton, SourceWL)
     ->  '$tbl_add_global_delays'(Delays, AllDelays),
