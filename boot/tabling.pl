@@ -1495,8 +1495,10 @@ sum(S0, S1, S) :- S is S0+S1.
     ).
 
 '$start_dynamic'(Head, Wrapped) :-
-    shift(dependency(Head)),
-    Wrapped.
+    catch(shift(dependency(Head)), _, true),
+    debug(monotonic, 'Cont in $start_dynamic/2 with ~p', [Head]),
+    Wrapped,
+    debug(monotonic, '  --> ~p', [Head]).
 
 abstract_goal(M:Head, M:Abstract) :-
     compound(Head),
