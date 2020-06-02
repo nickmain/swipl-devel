@@ -593,7 +593,7 @@ delim(Skeleton, Worker, WorkList, Delays) :-
     ;   SourceCall = dependency(Dynamic)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
         assertz(user:dyn_dep(Dynamic, Continuation, Skeleton, ATrie)),
-        call(Continuation)
+        delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = call_info(SrcSkeleton, SourceWL)
     ->  '$tbl_add_global_delays'(Delays, AllDelays),
         tdebug(wl_goal(SourceWL, SrcGoal, _)),
