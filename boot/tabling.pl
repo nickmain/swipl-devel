@@ -140,6 +140,14 @@ user:portray(ATrie) :-
     '$is_answer_trie'(ATrie),
     trie_goal(ATrie, Goal, _Skeleton),
     format('~q for ~p', [ATrie, Goal]).
+user:portray(Cont) :-
+    compound(Cont),
+    Cont =.. ['$cont$', Clause, PC | Args],
+    clause_property(Clause, file(File)),
+    file_base_name(File, Base),
+    clause_property(Clause, line_count(Line)),
+    clause_property(Clause, predicate(PI)),
+    format('~q at ~w:~d @PC=~w, ~p', [PI, Base, Line, PC, Args]).
 
 :- endif.
 
@@ -333,7 +341,7 @@ start_tabling(Closure, Wrapper, Worker) :-
     '$tbl_variant_table'(Closure, Wrapper, Trie, Status, Skeleton),
     catch(shift(dependency(Skeleton, Trie, Mono)), _, true),
     (   Mono == true
-    ->  debug(monotonic, 'Monotonic new answer: ~p', [Skeleton])
+    ->  tdebug(monotonic, 'Monotonic new answer: ~p', [Skeleton])
     ;   start_tabling_2(Closure, Wrapper, Worker, Trie, Status, Skeleton)
     ).
 
@@ -573,7 +581,7 @@ activate(Skeleton, Worker, WorkList) :-
 %        '$tbl_wkl_add_answer'/4 joins the two.  For a dependency we
 %        join the two explicitly.
 
-:- dynamic user:tab_dep/6, user:dyn_dep/4.
+:- dynamic tab_dep/6, dyn_dep/4.
 
 delim(Skeleton, Worker, WorkList, Delays) :-
     reset(Worker, SourceCall, Continuation),
@@ -588,11 +596,11 @@ delim(Skeleton, Worker, WorkList, Delays) :-
         !
     ;   SourceCall = dependency(SrcSkeleton, SrcTrie, Mono)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
-        assertz(user:tab_dep(SrcTrie, SrcSkeleton, Mono, Continuation, Skeleton, ATrie)),
+        assertz(tab_dep(SrcTrie, SrcSkeleton, Mono, Continuation, Skeleton, ATrie)),
         delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = dependency(Dynamic)
     ->  '$tbl_wkl_table'(WorkList, ATrie),
-        assertz(user:dyn_dep(Dynamic, Continuation, Skeleton, ATrie)),
+        assertz(dyn_dep(Dynamic, Continuation, Skeleton, ATrie)),
         delim(Skeleton, Continuation, WorkList, Delays)
     ;   SourceCall = call_info(SrcSkeleton, SourceWL)
     ->  '$tbl_add_global_delays'(Delays, AllDelays),
@@ -1490,6 +1498,7 @@ sum(S0, S1, S) :- S is S0+S1.
 %   Wrap an incremental dynamic predicate to be added to the IDG.
 
 '$wrap_incremental'(Head) :-
+    tdebug(monotonic, 'Wrapping ~p', [Head]),
     '$wrap_predicate'(Head, table, _Closure, Wrapped,
                       '$start_dynamic'(Head, Wrapped)),
     abstract_goal(Head, Abstract),
@@ -1501,9 +1510,9 @@ sum(S0, S1, S) :- S is S0+S1.
 
 '$start_dynamic'(Head, Wrapped) :-
     catch(shift(dependency(Head)), _, true),
-    debug(monotonic, 'Cont in $start_dynamic/2 with ~p', [Head]),
+    tdebug(monotonic, 'Cont in $start_dynamic/2 with ~p', [Head]),
     Wrapped,
-    debug(monotonic, '  --> ~p', [Head]).
+    tdebug(monotonic, '  --> ~p', [Head]).
 
 abstract_goal(M:Head, M:Abstract) :-
     compound(Head),
@@ -1524,7 +1533,7 @@ abstract_goal(Head, Head).
 dyn_update(Action, ClauseRef) :-
     (   atomic(ClauseRef)                       % avoid retractall, start(_)
     ->  '$clause'(Head, _Body, ClauseRef, _Bindings),
-        user:dyn_propagate(Action, Head),
+        dyn_propagate(Action, Head),
         dyn_changed_pattern(Head)
     ;   true
     ).
@@ -1539,6 +1548,38 @@ dyn_changed_pattern(Term) :-
 dyn_affected(Term, ATrie) :-
     '$tbl_variant_table'(VTable),
     trie_gen(VTable, Term, ATrie).
+
+%!  dyn_propagate(+Action, +Head)
+%
+%   Handle changes to a dynamic predicate as part of monotonic
+%   updates.
+
+dyn_propagate(asserta, Term) :-
+    asserted(Term).
+dyn_propagate(assertz, Term) :-
+    asserted(Term).
+
+asserted(Term) :-
+    tdebug(monotonic, 'Asserted ~p', [Term]),
+    (   dyn_dep(Term, Cont, Skel, ATrie),
+        tdebug(monotonic, 'Calling continuation', []),
+        call(Cont),
+        tdebug(monotonic, 'Cont returned ~p', [Skel]),
+        trie_insert(ATrie, Skel),
+        propagate(ATrie, Skel),
+        fail
+    ;   true
+    ).
+
+propagate(SrcTrie, SrcRet) :-
+    (   tab_dep(SrcTrie, SrcRet, true, Cont, Skel, ATrie),
+        call(Cont),
+        trie_insert(ATrie, Skel),
+        propagate(ATrie, Skel),
+        fail
+    ;   true
+    ).
+
 
 %!  '$unwrap_incremental'(:Head) is det.
 %
