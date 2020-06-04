@@ -651,6 +651,40 @@ This is the same policy as implemented in XSB
 \cite{DBLP:journals/tplp/Swift14}. Future versions may implement a more
 fine grained approach.
 
+
+\section{Monotonic tabling}
+\label{sec:tabling-monotonic}
+
+\jargon{Incremental tabling} (\secref{tabling-incremental}) maintains
+the consistency of tables that depend directly or indirectly on
+(incremental) dynamic predicates. This is done by \jargon{invalidating}
+dependent tables on an assert or retract and lazily \jargon{re-evaluate}
+invalid tables when their content is needed. Incremental tabling
+preserves all normal tabling properties, including well founded
+semantics. The downside is that re-evaluation recomputes the table from
+scratch. This section deals with \jargon{monotonic tabling}, a mechanism
+that propagates the consequences of assert/1 and friends without
+recomputing the dependent tables from scratch. Unlike incremental
+tabling though, monotonic tabling can only deal with monotonic programs,
+in particular it does \emph{not} deal with negation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \section{Shared tabling}
 \label{sec:tabling-shared}
 
