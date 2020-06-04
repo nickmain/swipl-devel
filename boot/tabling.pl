@@ -65,9 +65,8 @@
             '$moded_wrap_tabled'/4,	% :Head, +ModeTest, +Variant, +Moded
             '$wfs_call'/2,              % :Goal, -Delays
 
-            '$wrap_incremental'/1,      % :Head
-            '$unwrap_incremental'/1,    % :Head
-            '$start_dynamic'/2
+            '$set_table_wrappers'/1,    % :Head
+            '$start_monotonic'/2        % :Head, :Wrapped
           ]).
 
 :- meta_predicate

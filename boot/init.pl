@@ -155,10 +155,7 @@ non_terminal(Spec)       :- '$set_pattr'(Spec, pred, non_terminal(true)).
 '$set_pattr'(PI, M, _, []) :-
     !,
     '$pi_head'(M:PI, Pred),
-    (   '$get_predicate_attribute'(Pred, incremental, 1)
-    ->  '$wrap_incremental'(Pred)
-    ;   '$unwrap_incremental'(Pred)
-    ).
+    '$set_table_wrappers'(Pred).
 '$set_pattr'(A, M, How, [O|OT]) :-
     !,
     '$set_pattr'(A, M, How, O),

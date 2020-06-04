@@ -1030,10 +1030,7 @@ set_pprops([H|T], M, Props) :-
     set_pprops1(Props, M:H),
     strip_module(M:H, M2, P),
     '$pi_head'(M2:P, Pred),
-    (   '$get_predicate_attribute'(Pred, incremental, 1)
-    ->  '$wrap_incremental'(Pred)
-    ;   '$unwrap_incremental'(Pred)
-    ),
+    '$set_table_wrappers'(Pred),
     set_pprops(T, M, Props).
 
 set_pprops1([], _).
