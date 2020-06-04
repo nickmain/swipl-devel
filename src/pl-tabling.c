@@ -3222,7 +3222,8 @@ delayed_destroy_table(trie *atrie)
 
 /** '$tbl_destroy_table'(+Trie)
  *
- * Destroy a single trie table.
+ * Destroy a single trie table.  Succeeds silently if the answer trie
+ * has already been destroyed.
  */
 
 static
@@ -3270,7 +3271,7 @@ PRED_IMPL("$tbl_destroy_table", 1, tbl_destroy_table, 0)
       }
     }
 
-    return PL_type_error("table", A1);
+    return TRUE;
   }
 
   return FALSE;
