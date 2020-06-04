@@ -52,6 +52,7 @@
             abolish_module_tables/1,    % +Module
             abolish_nonincremental_tables/0,
             abolish_nonincremental_tables/1, % +Options
+            abolish_monotonic_tables/0,
 
             start_tabling/3,            % +Closure, +Wrapper, :Worker
             start_subsumptive_tabling/3,% +Closure, +Wrapper, :Worker
@@ -980,14 +981,17 @@ unqualify_goal(Goal, _, Goal).
 
 %!  abolish_all_tables
 %
-%   Remove all tables. This is normally used to free up the space or
-%   recompute the result after predicates on   which  the result for
-%   some tabled predicates depend.
+%   Remove all tables. This is normally  used   to  free up the space or
+%   recompute the result after predicates on   which the result for some
+%   tabled predicates depend.
 %
 %   Abolishes both local and shared   tables. Possibly incomplete tables
-%   are marked for destruction upon completion.
+%   are marked for destruction upon   completion.  The dependency graphs
+%   for incremental and monotonic tabling are reclaimed as well.
 
 abolish_all_tables :-
+    retractall(dyn_dep(_,_,_,_)),
+    retractall(tab_dep(_,_,_,_,_,_)),
     (   '$tbl_abolish_local_tables'
     ->  true
     ;   true
@@ -1521,6 +1525,24 @@ sum(S0, S1, S) :- S is S0+S1.
 		 *       MONOTONIC TABLING	*
 		 *******************************/
 
+%!  dyn_dep(:Head, -Continuation, -Return, -ATrie)
+%
+%   Dynamic predicate that maintains  the   dependency  from a monotonic
+%   dynamic predicate to an answer trie.
+
+%!  tab_dep(+SrcTrie, +SrcReturn, -IsMono, -Continuation, -Return, -Atrie)
+%
+%   Dependency between two monotonic tables. If   SrcReturn  is added to
+%   SrcTrie we must add all answers for Return of Continuation to Atrie.
+%   IsMono shares with Continuation and is   used  in start_tabling/3 to
+%   distinguish normal tabled call from propagation.
+
+%!  wrap_monotonic(:Head)
+%
+%   Prepare the dynamic predicate Head for monotonic tabling. This traps
+%   calls to build the dependency graph and updates to propagate answers
+%   from new clauses through the dependency graph.
+
 wrap_monotonic(Head) :-
     '$wrap_predicate'(Head, monotonic, _Closure, Wrapped,
                       '$start_monotonic'(Head, Wrapped)),
@@ -1557,12 +1579,11 @@ monotonic_update(Action, ClauseRef) :-
 %   updates.
 
 mon_propagate(asserta, Term) :-
-    !,
     asserted(Term).
 mon_propagate(assertz, Term) :-
-    !,
     asserted(Term).
-mon_propagate(_, _).
+mon_propagate(retract, Term) :-
+    mon_abolish_dependents(Term).
 
 asserted(Term) :-
     tdebug(monotonic, 'Asserted ~p', [Term]),
@@ -1581,6 +1602,35 @@ propagate(SrcTrie, SrcRet) :-
         call(Cont),
         trie_insert(ATrie, Skel),
         propagate(ATrie, Skel),
+        fail
+    ;   true
+    ).
+
+
+%!  mon_abolish_dependents(+HeadOrTrie)
+%
+%   Abolish all dependency relations from HeadOrTrie and their tables.
+
+mon_abolish_dependents(Node) :-
+    (   (   is_trie(Node)
+        ->  retract(tab_dep(Node, _Ret0, _IsMono, _ContinuationT, _RetT, ATrie))
+        ;   retract(dyn_dep(Node, _ContinuationD, _RetD, ATrie))
+        ),
+        '$tbl_destroy_table'(ATrie),
+        mon_abolish_dependents(ATrie),
+        fail
+    ;   true
+    ).
+
+%!  abolish_monotonic_tables
+%
+%   Abolish all monotonic tables and the monotonic dependency relations.
+
+abolish_monotonic_tables :-
+    (   (   retract(dyn_dep(_Head, _ContinuationD, _RetD, ATrie))
+        ;   retract(tab_dep(_Trie, _Ret0, _IsMono, _ContinuationT, _RetT, ATrie))
+        ),
+        '$tbl_destroy_table'(ATrie),
         fail
     ;   true
     ).
