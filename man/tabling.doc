@@ -668,21 +668,39 @@ recomputing the dependent tables from scratch. Unlike incremental
 tabling though, monotonic tabling can only deal with monotonic programs,
 in particular it does \emph{not} deal with negation.
 
+The example below defines the transitive closure of a bi-directional
+graph using monotonic tabling. This program builds tables for the
+\nopredref{connected}{2} and maintains these tables when new facts are
+added for \nopredref{link}{2}.
 
+\begin{code}
+:- table connected/2 as monotonic.
+:- dynamic link/2 as monotonic.
 
+connected(X, Y) :-
+    connected(Y, X).
+connected(X, Z) :-
+    connected(X, Y),
+    connected(Y, Z).
+connected(X, Y) :-
+    link(X, Y).
+\end{code}
 
+The list below describes properties of monotonic tabling and relation to
+other tabling primitives:
 
+\begin{itemize}
+   \item When using retract/1 on a dynamic monotonic predicate, all
+dependent tables and dependency links are destroyed.  Subsequent calling
+of one of the dependent goals rebuilds the tables and dependencies from
+scratch.
 
+   \item abolish_all_tables/0 destroys all monotonic dependency relations.
 
-
-
-
-
-
-
-
-
-
+   \item Dynamic predicates can be declared as both \const{monotonic} and
+\const{incremental} and it allowed to have both incremental and monotonic
+tabled predicates that depend on such dynamic predicates.
+\end{itemize}
 
 
 \section{Shared tabling}
