@@ -1499,80 +1499,70 @@ sum(S0, S1, S) :- S is S0+S1.
 
 
 		 /*******************************
-		 *      INCREMENTAL TABLING	*
+		 *      DYNAMIC PREDICATES	*
 		 *******************************/
 
-%!  '$wrap_incremental'(:Head) is det.
+%!  '$set_table_wrappers'(:Head)
 %
-%   Wrap an incremental dynamic predicate to be added to the IDG.
+%   Clear/add wrappers and notifications to trap dynamic predicates.
+%   This is required both for incremental and monotonic tabling.
 
-'$wrap_incremental'(Head) :-
-    tdebug(monotonic, 'Wrapping ~p', [Head]),
-    (   '$get_predicate_attribute'(Head, monotonic, 1)
-    ->  '$wrap_predicate'(Head, table, _Closure, Wrapped,
-                          '$start_dynamic'(Head, Wrapped))
-    ;   true
+'$set_table_wrappers'(Pred) :-
+    (   '$get_predicate_attribute'(Pred, incremental, 1)
+    ->  wrap_incremental(Pred)
+    ;   unwrap_incremental(Pred)
     ),
-    abstract_goal(Head, Abstract),
-    '$pi_head'(PI, Head),
-    (   Head == Abstract
-    ->  prolog_listen(PI, dyn_update)
-    ;   prolog_listen(PI, dyn_update(Abstract))
+    (   '$get_predicate_attribute'(Pred, monotonic, 1)
+    ->  wrap_monotonic(Pred)
+    ;   unwrap_monotonic(Pred)
     ).
 
-'$start_dynamic'(Head, Wrapped) :-
+		 /*******************************
+		 *       MONOTONIC TABLING	*
+		 *******************************/
+
+wrap_monotonic(Head) :-
+    '$wrap_predicate'(Head, monotonic, _Closure, Wrapped,
+                      '$start_monotonic'(Head, Wrapped)),
+    '$pi_head'(PI, Head),
+    prolog_listen(PI, monotonic_update).
+
+%!  unwrap_monotonic(+Head)
+%
+%   Remove the monotonic wrappers and dependencies.
+
+unwrap_monotonic(Head) :-
+    '$pi_head'(PI, Head),
+    (   unwrap_predicate(PI, monotonic)
+    ->  prolog_unlisten(PI, monotonic_update)
+    ;   true
+    ).
+
+'$start_monotonic'(Head, Wrapped) :-
     catch(shift(dependency(Head)), _, true),
     tdebug(monotonic, 'Cont in $start_dynamic/2 with ~p', [Head]),
     Wrapped,
     tdebug(monotonic, '  --> ~p', [Head]).
 
-abstract_goal(M:Head, M:Abstract) :-
-    compound(Head),
-    '$get_predicate_attribute'(M:Head, abstract, 1),
-    !,
-    compound_name_arity(Head, Name, Arity),
-    functor(Abstract, Name, Arity).
-abstract_goal(Head, Head).
-
-%!  dyn_update(+Action, +Context) is det.
-%
-%   Track changes to added or removed clauses. We use '$clause'/4
-%   because it works on erased clauses.
-%
-%   @tbd Add a '$clause_head'(-Head, +ClauseRef) to only decompile the
-%   head.
-
-dyn_update(Action, ClauseRef) :-
+monotonic_update(Action, ClauseRef) :-
     (   atomic(ClauseRef)                       % avoid retractall, start(_)
     ->  '$clause'(Head, _Body, ClauseRef, _Bindings),
-        dyn_propagate(Action, Head),
-        dyn_changed_pattern(Head)
+        mon_propagate(Action, Head)
     ;   true
     ).
 
-dyn_update(Abstract, _, _) :-
-    dyn_changed_pattern(Abstract).
-
-dyn_changed_pattern(Term) :-
-    forall(dyn_affected(Term, ATrie),
-           '$idg_changed'(ATrie)).
-
-dyn_affected(Term, ATrie) :-
-    '$tbl_variant_table'(VTable),
-    trie_gen(VTable, Term, ATrie).
-
-%!  dyn_propagate(+Action, +Head)
+%!  mon_propagate(+Action, +Head)
 %
 %   Handle changes to a dynamic predicate as part of monotonic
 %   updates.
 
-dyn_propagate(asserta, Term) :-
+mon_propagate(asserta, Term) :-
     !,
     asserted(Term).
-dyn_propagate(assertz, Term) :-
+mon_propagate(assertz, Term) :-
     !,
     asserted(Term).
-dyn_propagate(_, _).
+mon_propagate(_, _).
 
 asserted(Term) :-
     tdebug(monotonic, 'Asserted ~p', [Term]),
@@ -1595,26 +1585,73 @@ propagate(SrcTrie, SrcRet) :-
     ;   true
     ).
 
+		 /*******************************
+		 *      INCREMENTAL TABLING	*
+		 *******************************/
 
-%!  '$unwrap_incremental'(:Head) is det.
+%!  wrap_incremental(:Head) is det.
+%
+%   Wrap an incremental dynamic predicate to be added to the IDG.
+
+wrap_incremental(Head) :-
+    tdebug(monotonic, 'Wrapping ~p', [Head]),
+    abstract_goal(Head, Abstract),
+    '$pi_head'(PI, Head),
+    (   Head == Abstract
+    ->  prolog_listen(PI, dyn_update)
+    ;   prolog_listen(PI, dyn_update(Abstract))
+    ).
+
+abstract_goal(M:Head, M:Abstract) :-
+    compound(Head),
+    '$get_predicate_attribute'(M:Head, abstract, 1),
+    !,
+    compound_name_arity(Head, Name, Arity),
+    functor(Abstract, Name, Arity).
+abstract_goal(Head, Head).
+
+%!  dyn_update(+Action, +Context) is det.
+%
+%   Track changes to added or removed clauses. We use '$clause'/4
+%   because it works on erased clauses.
+%
+%   @tbd Add a '$clause_head'(-Head, +ClauseRef) to only decompile the
+%   head.
+
+dyn_update(_Action, ClauseRef) :-
+    (   atomic(ClauseRef)                       % avoid retractall, start(_)
+    ->  '$clause'(Head, _Body, ClauseRef, _Bindings),
+        dyn_changed_pattern(Head)
+    ;   true
+    ).
+
+dyn_update(Abstract, _, _) :-
+    dyn_changed_pattern(Abstract).
+
+dyn_changed_pattern(Term) :-
+    forall(dyn_affected(Term, ATrie),
+           '$idg_changed'(ATrie)).
+
+dyn_affected(Term, ATrie) :-
+    '$tbl_variant_table'(VTable),
+    trie_gen(VTable, Term, ATrie).
+
+%!  unwrap_incremental(:Head) is det.
 %
 %   Remove dynamic predicate incremenal forwarding,   reset the possible
 %   `abstract` property and remove possible tables.
 
-'$unwrap_incremental'(Head) :-
+unwrap_incremental(Head) :-
     '$pi_head'(PI, Head),
-    (   unwrap_predicate(PI, incremental)
-    ->  abstract_goal(Head, Abstract),
-        (   Head == Abstract
-        ->  prolog_unlisten(PI, dyn_update)
-        ;   '$set_predicate_attribute'(Head, abstract, 0),
-            prolog_unlisten(PI, dyn_update(_))
-        ),
-        (   '$tbl_variant_table'(VariantTrie)
-        ->  forall(trie_gen(VariantTrie, Head, ATrie),
-                   '$tbl_destroy_table'(ATrie))
-        ;   true
-        )
+    abstract_goal(Head, Abstract),
+    (   Head == Abstract
+    ->  prolog_unlisten(PI, dyn_update)
+    ;   '$set_predicate_attribute'(Head, abstract, 0),
+        prolog_unlisten(PI, dyn_update(_))
+    ),
+    (   '$tbl_variant_table'(VariantTrie)
+    ->  forall(trie_gen(VariantTrie, Head, ATrie),
+               '$tbl_destroy_table'(ATrie))
     ;   true
     ).
 

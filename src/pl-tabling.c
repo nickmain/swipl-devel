@@ -6391,12 +6391,7 @@ tbl_set_predicate_attribute(Definition def, atom_t att, term_t value)
   }
 
   if ( att == ATOM_monotonic )
-  { if ( set_bool_attr(p, TP_MONOTONIC, value) )
-    { if ( true(p, TP_MONOTONIC) )
-	return setAttrDefinition(def, P_INCREMENTAL, true(p, TP_MONOTONIC));
-      return TRUE;
-    }
-    return FALSE;
+  { return set_bool_attr(p, TP_MONOTONIC, value);
   } else
   { size_t v;
 
